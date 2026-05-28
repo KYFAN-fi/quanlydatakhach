@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quản lý khách tài chính</title>
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+    <div class="app-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Quản lý dữ liệu khách tài chính</p>
+                <h1>Bảng điều phối khách hàng</h1>
+            </div>
+            <div class="top-actions">
+                <label class="file-picker">
+                    <input id="fileInput" type="file" accept=".xlsx,.xlsm" />
+                    Nhập Excel
+                </label>
+                <button id="addRecordBtn" class="btn secondary" type="button">Thêm khách</button>
+                <button id="exportXlsxBtn" class="btn primary" type="button">Xuất Excel</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="status-strip" aria-label="Tổng quan dữ liệu">
+                <div class="metric">
+                    <span>Tổng hiển thị</span>
+                    <strong id="metricFiltered">0</strong>
+                    <small id="metricTotal">0 trong bộ dữ liệu</small>
+                </div>
+                <div class="metric">
+                    <span>Đã gọi</span>
+                    <strong id="metricCalled">0</strong>
+                    <small>Khách đã liên hệ</small>
+                </div>
+                <div class="metric">
+                    <span>Chưa nghe</span>
+                    <strong id="metricMissed">0</strong>
+                    <small>Cần gọi lại</small>
+                </div>
+                <div class="metric">
+                    <span>Địa phương</span>
+                    <strong id="metricAreas">0</strong>
+                    <small>Khu vực khác nhau</small>
+                </div>
+            </section>
+
+            <section class="workspace">
+                <aside class="side-panel" aria-label="Bộ lọc và biểu đồ">
+                    <form id="filterForm" class="filter-form">
+                        <div class="field">
+                            <label for="searchInput">Tìm kiếm</label>
+                            <input id="searchInput" type="search" placeholder="Tên, SĐT, Zalo, ghi chú..."
+                                autocomplete="off" />
+                        </div>
+                        <div class="field">
+                            <label for="statusFilter">Trạng thái</label>
+                            <select id="statusFilter"></select>
+                        </div>
+                        <div class="field">
+                            <label for="areaFilter">Địa phương</label>
+                            <select id="areaFilter"></select>
+                        </div>
+                        <div class="field">
+                            <label for="conditionFilter">Tình trạng / nhu cầu</label>
+                            <select id="conditionFilter"></select>
+                        </div>
+                        <div class="field">
+                            <label for="serviceFilter">Dịch vụ</label>
+                            <select id="serviceFilter"></select>
+                        </div>
+                        <div class="filter-actions">
+                            <button class="btn primary" type="submit">Áp dụng</button>
+                            <button id="resetFiltersBtn" class="btn ghost" type="button">Xóa lọc</button>
+                        </div>
+                    </form>
+
+                    <div class="chart-block">
+                        <div class="section-title">
+                            <h2>Trạng thái xử lý</h2>
+                            <span>Theo bộ lọc</span>
+                        </div>
+                        <canvas id="statusChart" width="320" height="220"></canvas>
+                        <div id="statusLegend" class="legend"></div>
+                    </div>
+
+                    <div class="chart-block">
+                        <div class="section-title">
+                            <h2>Địa phương nhiều khách</h2>
+                            <span>Theo bộ lọc</span>
+                        </div>
+                        <canvas id="areaChart" width="320" height="240"></canvas>
+                    </div>
+                </aside>
+
+                <section class="data-panel" aria-label="Danh sách khách hàng">
+                    <div class="table-toolbar">
+                        <div>
+                            <h2>Danh sách dữ liệu</h2>
+                            <p id="activeFilterText">Chưa có dữ liệu. Hãy nhập file Excel.</p>
+                        </div>
+                        <div class="page-size">
+                            <label for="pageSizeSelect">Hiển thị</label>
+                            <select id="pageSizeSelect">
+                                <option value="10">10 dòng</option>
+                                <option value="20" selected>20 dòng</option>
+                                <option value="50">50 dòng</option>
+                                <option value="100">100 dòng</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Khách hàng</th>
+                                    <th>Số điện thoại</th>
+                                    <th>Địa phương</th>
+                                    <th>Nhu cầu / tình trạng</th>
+                                    <th>Trạng thái</th>
+                                    <th>Dịch vụ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recordsBody"></tbody>
+                        </table>
+                        <div id="emptyState" class="empty-state">
+                            <strong>Chưa có dữ liệu</strong>
+                            <span>Nhập file Excel để bắt đầu quản lý, tìm kiếm và phân loại.</span>
+                        </div>
+                    </div>
+
+                    <div class="pagination">
+                        <button id="prevPageBtn" class="btn ghost" type="button">Trước</button>
+                        <span id="pageInfo">Trang 0 / 0</span>
+                        <button id="nextPageBtn" class="btn ghost" type="button">Sau</button>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <div id="detailModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="detail"></div>
+        <article class="modal-panel detail-panel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+            <header class="modal-header">
+                <div>
+                    <p class="eyebrow">Chi tiết khách hàng</p>
+                    <h2 id="detailTitle">Khách hàng</h2>
+                </div>
+                <button class="icon-btn" type="button" data-close="detail" aria-label="Đóng">x</button>
+            </header>
+            <div id="detailContent" class="detail-content"></div>
+            <footer class="modal-footer">
+                <button id="deleteRecordBtn" class="btn danger" type="button">Xóa</button>
+                <div>
+                    <button class="btn ghost" type="button" data-close="detail">Đóng</button>
+                    <button id="openEditBtn" class="btn primary" type="button">Sửa</button>
+                </div>
+            </footer>
+        </article>
+    </div>
+
+    <div id="editModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close="edit"></div>
+        <article class="modal-panel edit-panel" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+            <header class="modal-header">
+                <div>
+                    <p class="eyebrow" id="editModeLabel">Cập nhật dữ liệu</p>
+                    <h2 id="editTitle">Sửa khách hàng</h2>
+                </div>
+                <button class="icon-btn" type="button" data-close="edit" aria-label="Đóng">x</button>
+            </header>
+            <form id="editForm" class="edit-form">
+                <div class="form-grid">
+                    <div class="field">
+                        <label for="editName">Tên khách hàng</label>
+                        <input id="editName" name="name" type="text" />
+                    </div>
+                    <div class="field">
+                        <label for="editPhone">Số điện thoại</label>
+                        <input id="editPhone" name="phone" type="tel" />
+                    </div>
+                    <div class="field">
+                        <label for="editSocial">Zalo / Facebook</label>
+                        <input id="editSocial" name="social" type="text" />
+                    </div>
+                    <div class="field">
+                        <label for="editArea">Địa phương</label>
+                        <input id="editArea" name="area" type="text" list="areaOptions" />
+                        <datalist id="areaOptions"></datalist>
+                    </div>
+                    <div class="field">
+                        <label for="editStatus">Trạng thái xử lý</label>
+                        <input id="editStatus" name="status" type="text" list="statusOptions" />
+                        <datalist id="statusOptions"></datalist>
+                    </div>
+                    <div class="field">
+                        <label for="editService">Dịch vụ</label>
+                        <input id="editService" name="service" type="text" list="serviceOptions" />
+                        <datalist id="serviceOptions"></datalist>
+                    </div>
+                    <div class="field wide">
+                        <label for="editNeed">Nhu cầu, tình trạng khách</label>
+                        <textarea id="editNeed" name="need" rows="3"></textarea>
+                    </div>
+                    <div class="field wide">
+                        <label for="editNotes">Ghi chú</label>
+                        <textarea id="editNotes" name="notes" rows="3"></textarea>
+                    </div>
+                </div>
+                <footer class="modal-footer">
+                    <button class="btn ghost" type="button" data-close="edit">Hủy</button>
+                    <button id="saveEditBtn" class="btn primary" type="submit" disabled>Lưu thay đổi</button>
+                </footer>
+            </form>
+        </article>
+    </div>
+
+    <div id="confirmModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop"></div>
+        <article class="modal-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <header class="modal-header">
+                <div>
+                    <p id="confirmLabel" class="eyebrow">Xác nhận</p>
+                    <h2 id="confirmTitle">Xác nhận thao tác</h2>
+                </div>
+            </header>
+            <p id="confirmMessage" class="confirm-message"></p>
+            <footer class="modal-footer">
+                <button id="cancelConfirmBtn" class="btn ghost" type="button">Hủy</button>
+                <button id="acceptConfirmBtn" class="btn primary" type="button">Xác nhận</button>
+            </footer>
+        </article>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <script src="./app.js" defer></script>
+</body>
+
+</html>
